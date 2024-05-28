@@ -1,0 +1,307 @@
+@attribute [Authorize]
+@using Newtonsoft.Json;
+@using ProyectoPortal.Models;
+@using ProyectoPortal.Services.ApiPortalTramites.IRepository;
+@inject IJSRuntime js;
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager MyNavigationManager
+@inject INegocioAplicaciones_RolesRequest request
+@inject ITramiteRequest requestTramite
+@inject IToastService toastService
+
+@if (mostrarLeyenda)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        No existen perfiles disponibles para la dependencia seleccionada.
+    </div>
+}
+else
+{
+    <EditForm Model="_NegocioXX">
+        <fieldset>
+            <div class="row form-group">
+                <h3>Marque la opción deseada <span class="text-danger">*</span></h3>
+                <div class="container">
+                    <div class="row">
+                        <OptionABM OnOptionSelected="OptionABMSelected" Alta=true Baja=true Modificacion=true />
+                    </div>
+                </div>
+      
+                @if (!string.IsNullOrEmpty(_NegocioXX.opcionDeseada) && _NegocioXX.opcionDeseada != "Alta")
+{
+         <div class="row">
+            <div class="col-md-6 mt-2">
+                <div class="form-group item-form">
+                    <p class="help-block error hidden">Ingrese nombre de usuario <span class="text-danger">*</span></p>
+                    <BusquedaUsuario UsuarioSeleccionado="@usuarioAux" 
+                             OnUserOk="SetearUsuario" 
+                             idInput="idUsuario" 
+                             idInputSeleccionado="idUsuarioSeleccionado" 
+                             esNombreCompleto="Si">
+                    </BusquedaUsuario>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group item-form">
+                           <label for="idUserSeleccionado" class="col-form-label">Seleccionado</label>
+                    <input class="form-control" type="text" id="idUserSeleccionado" @bind="_NegocioXX.usuario" disabled />
+                </div>
+            </div>
+        </div>
+
+}
+            </div>
+            @if (!string.IsNullOrEmpty(_NegocioXX.opcionDeseada))
+            {
+                <div class="row form-group">
+                    <hr>
+                    <h3>Marque perfil deseado <span class="text-danger">*</span></h3>
+                    <EditContext context="_EditContext">
+                        <div class="row">
+                            @foreach (var rol in rolesTramitesSeleccionados)
+                            {
+                                <div class="@columna col-sm-12">
+                                    <div class="panel panel-default">
+                                        <div class="panel-body">
+                                            <div class="media">
+                                                <div class="media-body">
+                                                    <h4>
+                                                        <InputCheckbox @bind-Value="rol.seleccionado"></InputCheckbox>
+                                                        @rol.perfil
+                                                    </h4>
+                                                    <p class="text-mutted text-start">@rol.detalle</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </EditContext>
+                </div>
+            }
+        </fieldset>
+    </EditForm>
+}
+
+<div class="d-flex flex-row-reverse">
+    <div class="p-2">
+        @if (!formularioEnviado)
+        {
+            <button class="btn-success btn next-step" @onclick="@(() => ConfirmarDatos())" data-step="1">Enviar</button>
+        }
+        else
+        {
+            <button class="btn-success btn next-step buttonload" disabled data-step="1"><i class="fa fa-spinner fa-spin"></i> Enviando</button>
+        }
+    </div>
+</div>
+<hr />
+<div class="col-xl-12 col-lg-12 col-md-12 col-sm-12">
+    <div class="row alert alert alert-light text-justify">
+        @LeyendaAcuerdos
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    public string UserID { get; set; }
+    [Parameter]
+    public string idDependenciaSeleccionada { get; set; }
+    [Parameter]
+    public EventCallback<(negocioAplicaciones, List<negocioAplicaciones_Roles_Seleccionado>)> NegocioXXCompleto { get; set; }
+    [Parameter]
+    public string LeyendaAcuerdos { get; set; }
+    public string codTramite { get; set; } = "XX";
+    negocioAplicaciones _NegocioXX { get; set; } = new negocioAplicaciones();
+    tramite rtaTramite { get; set; }
+    public string idTramite { get; set; }
+    public string opcionSeleccionadaRol;
+    public string auxIdDependenciaSeleccionada { get; set; } = "0";
+    public Respuesta<List<negocioAplicaciones_Roles>> rta { get; set; } = new Respuesta<List<negocioAplicaciones_Roles>>();
+    public List<negocioAplicaciones_Roles_Seleccionado> rolesTramitesSeleccionados { get; set; } = new List<negocioAplicaciones_Roles_Seleccionado>();
+    public string? UserIdMeta4 { get; set; }
+    public string columna { get; set; }
+    public int numColumnas { get; set; }
+    public int maxColumnasPorFila { get; set; } = 4;
+    tramiteCabecera _datosCabeceraRRHH = new tramiteCabecera();
+    public DateTime fechaDeHoy = FuncionesGeneralesnegocio.TodayDateimputDT();
+    private NotificationsMessage messages = new NotificationsMessage();
+    private EditContext _editContext;
+    bool mostrarLeyenda = false;
+    bool formularioEnviado { get; set; } = false;
+    string usuarioAux { get; set; } = string.Empty;
+    string nombrePersona { get; set; } = string.Empty;
+    string usuarioSeleccionado { get; set; } = string.Empty;
+    [Parameter] public bool Mensaje { get; set; }
+    private bool DeshabilitarBoton = true;
+
+    private async Task TraerUID()
+    {
+        var authState = await authenticationState;
+        var user = authState?.User;
+        UserID = ClaimsPrincipalExtensions.GetDisplayNameString(user).ToLower();
+        string idMeta4 = ClaimsPrincipalExtensions.GetIDMeta4(user);
+        if (idMeta4 == null)
+            UserIdMeta4 = "0";
+        else
+            UserIdMeta4 = idMeta4.ToLower();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TraerUID();
+            auxIdDependenciaSeleccionada = idDependenciaSeleccionada;
+            await getRolesByIdMeta4();
+
+        }
+
+        if (formularioEnviado == true && Mensaje == false)
+        {
+            formularioEnviado = Mensaje;
+            await InvokeAsync(() => StateHasChanged());
+        }
+        if (auxIdDependenciaSeleccionada != idDependenciaSeleccionada)
+        {
+            await getRolesByIdMeta4();
+        }
+
+    }
+
+
+    private async Task SetearUsuario(string userID)
+    {
+        var userSeleccionado = userID.Split("|")[1].Split("@")[0].ToLower();
+        var mailUserSeleccionado = userID.Split("|")[1];
+        if (userSeleccionado != null && mailUserSeleccionado != null)
+        {
+            //_NegocioXX.usuario = mailUserSeleccionado;
+            _NegocioXX.usuario = userSeleccionado;
+            nombrePersona = userSeleccionado;
+            usuarioAux = string.Empty;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+    public async Task HandleRolSelected(string option)
+    {
+        _NegocioXX.idAplicacionesRoles = option;
+        rolesTramitesSeleccionados.Where(x => x.perfil == option).First().seleccionado = true;
+    }
+
+    private async Task OptionABMSelected(string option)
+    {
+        _NegocioXX.usuario = "";
+        _NegocioXX.opcionDeseada = option;
+    }
+
+    private async Task getRolesByIdMeta4()
+    {
+        rtaTramite = await requestTramite.GetTramitesCodTramite($"/api/Tramite/GetTramitesByCodTramite/{codTramite}");
+        if (rtaTramite.Id == 0)
+        {
+            toastService.ShowError("No fue posible obtener el id del trámite", UserID, "Error");
+        }
+        else
+        {
+            rta = await request.GetByIdTramite($"/api/negocioAplicacionesRoles/GetByIdTramite/{rtaTramite.Id}");
+            if (Convert.ToBoolean(rta.Exito))
+            {
+                var paidIdDependenciaSeleccionada = "|" + idDependenciaSeleccionada + "|";
+                var listRoles = rta.Data
+                                   .Where(x => (x.audiencia?.ToLower() ?? "").ToLower().Contains(paidIdDependenciaSeleccionada) || string.IsNullOrEmpty(x.audiencia?.ToString() ?? ""))
+                                    .OrderBy(x => x.nombre)
+                                    .ToList();
+                numColumnas = Math.Min(listRoles.Count, maxColumnasPorFila);
+                if (numColumnas != 0)
+                    columna = $"col-lg-{12 / numColumnas}";
+                else
+                    columna = $"col-lg-12";
+
+                rolesTramitesSeleccionados.Clear();
+                foreach (negocioAplicaciones_Roles itemRol in listRoles)
+                {
+                    if (rolesTramitesSeleccionados.Count == listRoles.Count)
+                        break;
+
+                    rolesTramitesSeleccionados.Add(new negocioAplicaciones_Roles_Seleccionado
+                        {
+                            perfil = itemRol.nombre,
+                            detalle = itemRol.detalle,
+                            seleccionado = false
+                        });
+                }
+                if (rolesTramitesSeleccionados.Count == 0)
+                    mostrarLeyenda = true;
+                else
+                    mostrarLeyenda = false;
+
+            }
+            auxIdDependenciaSeleccionada = idDependenciaSeleccionada;
+            await InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+
+
+    private async Task<bool> ConfirmarDatos()
+    {
+
+        if (_NegocioXX.opcionDeseada == null)
+        {
+            toastService.ShowError("Debe seleccionar una opción", UserID, "Error");
+            return false;
+        }
+
+        if (_NegocioXX.opcionDeseada != "Alta" && string.IsNullOrEmpty(_NegocioXX.usuario))
+        {
+            toastService.ShowError("Debe seleccionar un usuario de aplicación", UserID, "Error");
+            return false;
+        }
+
+        foreach (var rolesSeleccionados in rolesTramitesSeleccionados)
+        {
+            if (rolesSeleccionados.seleccionado)
+            {
+                _NegocioXX.idAplicacionesRoles = _NegocioXX.idAplicacionesRoles + " • " + rolesSeleccionados.perfil + " ";
+            }
+        }
+
+        if (_NegocioXX.idAplicacionesRoles == null)
+        {
+            toastService.ShowError("Debe seleccionar un perfil de aplicación", UserID, "Error");
+            return false;
+        }
+
+        if (_NegocioXX.idAplicacionesRoles != null && _NegocioXX.opcionDeseada != null)
+        {
+            var tupla = (_NegocioXX, rolesTramitesSeleccionados);
+            await NegocioXXCompleto.InvokeAsync(tupla);
+        }
+        return true;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
