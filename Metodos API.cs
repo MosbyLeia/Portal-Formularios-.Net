@@ -113,3 +113,42 @@
                                 }
                             }
 
+
+     [HttpPost("Historico")]
+        public async Task<Respuesta<negocioUmbral_Historico>> AddHistorico(negocio_Umbral_Historico model)
+        {
+            Respuesta<negocio_Umbral_Historico> oRespuesta = new Respuesta<negocio_Umbral_Historico>();
+            LoggerManager logger = new LoggerManager();
+
+            try
+            {
+                using (var context = _portalsContext)
+                {
+                    negocio_Umbral_Historico oUmbral = new negocio_Umbral_Historico();
+                    oUmbral.umbral = model.umbral;
+                    oUmbral.creado = model.creado;
+                    oUmbral.creadoPor = model.creadoPor;
+                    oUmbral.modificado = model.modificado;
+                    oUmbral.modificadoPor = model.modificadoPor;
+                    oUmbral.activo = model.activo;
+                    oUmbral.fechaDesde = model.fechaDesde;
+                    oUmbral.fechaHasta = model.fechaHasta;
+                    oUmbral.modificadoPor_Historico = model.modificadoPor_Historico;
+                    oUmbral.camposModificados = model.camposModificados;
+                    oUmbral.idUmbral = model.idUmbral;
+
+                    context.negocio_Umbral_Historico.Add(oUmbral);
+                    context.SaveChanges();
+                    oRespuesta.Data = oUmbral;
+                    oRespuesta.Exito = 1;
+                    oRespuesta.Mensaje = "El registro se ha agregado exitosamente";
+                }
+            }
+            catch (Exception ex)
+            {
+                oRespuesta.Exito = 0;
+                logger.LogError("Error al insertar umbral", ex);
+                oRespuesta.Mensaje = ex.Message;
+            }
+            return oRespuesta;
+        }
