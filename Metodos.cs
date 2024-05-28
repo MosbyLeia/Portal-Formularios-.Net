@@ -39,3 +39,44 @@
 
 
     }
+
+
+ [HttpGet("GetNombresAplicaciones")]
+        public async Task<Respuesta<List<string>>> GetNombresAplicaciones()
+        {
+            LoggerManager logger = new LoggerManager();
+            Respuesta<List<string>> respuesta = new Respuesta<List<string>>();
+            List<string> listado = new List<string>();
+            try
+            {
+                using (var context = _portalTramitesContext)
+                {
+                    var rta = context.listadoAplicaciones
+                        .Where(t => t.activo == true)
+                        .OrderBy(t => t.nombre)
+                         .Select(t => t.nombre)
+                        .ToList();
+                    if (rta.Count != 0)
+                    {
+                        listado = rta;
+                        respuesta.Data = listado;
+                        respuesta.Exito = 1;
+                        respuesta.Mensaje = "Devolución lista de listado de aplicacion exitosamente.";
+                    }
+                    else
+                    {
+                        respuesta.Data = listado;
+                        respuesta.Exito = 0;
+                        respuesta.Mensaje = "No existen listado de aplicacion activos.";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                respuesta.Exito = 0;
+                logger.LogError(ex.Message);
+                respuesta.Mensaje = ex.Message;
+            }
+            return respuesta;
+        }
+
