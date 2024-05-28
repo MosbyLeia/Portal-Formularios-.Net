@@ -1,0 +1,418 @@
+@page ""
+@attribute [Authorize]
+@using System;
+@using System.Globalization;
+@using Newtonsoft.Json;
+@using ProyectoPortal.Services.ApiPortalTramites.IRepository;
+@using ProyectoPortal.Components.Firmas;
+@using ProyectoPortal.Helpers._00.FUNCIONESGRALES;
+@using ProyectoPortal.Models;
+@inject IHttpContextAccessor _httpContextAccesor;
+@inject IJSRuntime js
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@inject ITramiteInstanceRequest ITramiteInstanceRequest
+@inject IToastService toastService
+@inject IDatosCentralesRequest requestDatosCentrales
+@inject IloggerManager Logger
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ITramiteEvaluacionRequest ITramiteEvaluacionRequest
+@inject IFRequest request
+@using Microsoft.EntityFrameworkCore;
+
+
+<Volver NombreFormulario="Solicitud de Licencia Por horas" />
+<div class="col-12">
+    <div class="container-md p-4" id="container">
+        <div class="estiloAdicional">
+
+            <div class="headerDisp mb-3">
+                <div class="row align-items-center">
+                    <div class="col-12 col-sm-2 col-md-2">
+                        <div class="p-2">
+                            <img src="@cb.Logo" style="width: 110px;" />
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-10 col-md-10">
+                        <div class="d-flex justify-content-end">
+                            <span>@leyendaAnio</span>
+                        </div>
+                        <div id="nombreFormulario" style="text-align: end;">
+                            @_NombreFomulario
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sectionBodyDisp align-items-center row ">
+                <div class="col-12 mt-3">
+                    <div class="dia align-items-center mb-3">
+                        <div class="d-flex justify-content-end align-items-center">
+                            <p> @FuncionesGeneralesDisp.formatearFechaCreacion(_datosInstance.fechaCreacion)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-12 col-md-6">
+                    <div class="datosDireccion">
+                        <p>
+                            @_datosCabeceraRRHH.dependencia<br />
+                            @tratamiento @nombreResponsable
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-12 mt-2">
+                    <p>
+                        REF: Licencia 
+                    </p>
+
+                </div>
+                <div class="col-12 col-sm-12 col-md-12">
+                    <div class="parrafoTramite m-y-1">
+                        <p>
+                            Por medio del presente me dirijo a Ud. a efectos de solicitar descanso diario  de acuerdo a lo establecido en el  Convenio Colectivo de Trabajo.
+                        </p>
+
+                        @if (_datosNegocio.manianaDesde == null && _datosNegocio.manianaHasta == null && _datosNegocio.tardeDesde != "" && _datosNegocio.tardeHasta != "")
+
+                        {
+                            <p>
+                                De estar de acuerdo, dicho descanso por la tarde abarcará el horario comprendido entre las
+                                @(_datosNegocio.tardeDesde) y las @(_datosNegocio.tardeHasta).
+
+                            </p>
+
+                        }
+
+
+                        else if (_datosNegocio.tardeDesde == null && _datosNegocio.tardeHasta == null && _datosNegocio.manianaDesde != "" && _datosNegocio.manianaHasta != "")
+                        {
+                            <p>
+                                De estar de acuerdo, dicho descanso por la mañana abarcará el horario comprendido entre las @(_datosNegocio.manianaDesde) y las
+                                @(_datosNegocio.manianaHasta).
+
+                            </p>
+
+                        }
+
+                        else
+
+                        {
+                            <p>
+                                De estar de acuerdo, dicho descanso, por la mañana abarcará el horario comprendido entre las @(_datosNegocio.manianaDesde) y las @(_datosNegocio.manianaHasta), y por la tarde
+                                entre las @(_datosNegocio.tardeDesde) y las @(_datosNegocio.tardeHasta).
+                            </p>
+
+                        }
+                    </div>
+
+                    <p>
+                        La misma se solicita desde el @FuncionesGeneralesDisp.formatearFechaEnDDMMYYYY(_datosNegocio.fechaAAutorizarDesde) hasta el @FuncionesGeneralesDisp.formatearFechaEnDDMMYYYY(_datosNegocio.fechaAAutorizarDesde.AddDays(365)).
+                    </p>
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <p class="mb-0"><strong>Legajo:</strong> @_datosCabeceraRRHH.legajo</p>
+                    </div>
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <p class="mb-0"><strong>Solicitante:</strong> @_datosCabeceraRRHH.nombreYApellido</p>
+                    </div>
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <p class="mb-0"><strong>Tipo de documento:</strong> @_datosCabeceraRRHH.tipoDocumento</p>
+                    </div>
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <p class="mb-0"><strong>Número de Documento:</strong> @_datosCabeceraRRHH.numeroDocumento</p>
+                    </div>
+                    <div class="col-12 col-sm-12 col-md-12">
+                    </div>
+                    <div class="col-12 col-sm-12 col-md-12">
+                    </div>
+                </div>
+                <div class="d-print-none">
+                    <br />
+                    @if (_datosNegocio.adjuntoNombre != null && _datosNegocio.adjuntoNombre != "")
+                    {
+
+
+                        <div class="row">
+                            <div class="iframeFile">
+                                <a href="@tempFilePath" download style="text-decoration: none">
+
+                                    <i class="fa fa-file" style="font-size: 2rem;"></i>     <span>  </span>
+
+                                    @_datosNegocio.adjuntoNombre
+                                </a>
+
+                            </div>
+                        </div>
+
+                    }
+                </div>
+
+
+                <div class="footerPDF">
+                    <hr style="border:1.5px" />
+                    <div class="row m-y-1">
+                    </div>
+                    @foreach (var itemEvaluacion in _datosEvaluacion)
+                    {
+                        <div class="col offset-8 offset-md-10 mt-5 text-center">
+                            @if (itemEvaluacion.estado != "Pendiente")
+                            {
+                                <strong>@itemEvaluacion.estado </strong>
+                                <br />
+                                @itemEvaluacion.nombreResponsable <br />
+                                @if (itemEvaluacion.idMeta4 == itemEvaluacion.userResponsable)
+                                {
+                                    <i>En representación de @itemEvaluacion.userResponsable</i>
+                                    <br />
+                                }
+                                @itemEvaluacion.fechaAprobacion
+                            }
+                        </div>
+                        @if (itemEvaluacion.estado == "Rechazado" && !string.IsNullOrEmpty(@itemEvaluacion.observacion))
+                        {
+                            <div class="col-12 alert alert-danger mt-3" role="alert">
+                                @itemEvaluacion.observacion
+                            </div>
+                        }
+                        else if (itemEvaluacion.estado == "Cancelado" && !string.IsNullOrEmpty(@itemEvaluacion.observacion))
+                        {
+                            <div class="col-12 alert alert-danger mt-3" role="alert">
+                                @itemEvaluacion.observacion.
+                            </div>
+                        }
+                    }
+
+                    <div class="modal fade" id="cargarObsCancelar" tabindex="-1" aria-labelledby="cargarObsCancelarLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5" id="exampleModalLabel">Observaciones</h1>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-left">
+                                    <input id="observacionesCancelar" type="text" class="form-control" @bind-value="motivoCancelacion" required/>
+                      
+                                    <div class="invalid-feedback" style="display:@mostrarMotivo">
+                                        El campo "Observaciones" es obligatorio.
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+
+                                    <button type="button" class="btn btn-danger text-decoration-none" @onclick="@(() => CancelarLicencia(_datosEvaluacion.FirstOrDefault()))">
+
+                                        <span>Aceptar</span>
+
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <footer id="pieOficial">
+                <div class="p-2">
+                    <img src="@cb.PieBNMCH" />
+                </div>
+            </footer>
+            <SeccionFirmas idTramite="Id"></SeccionFirmas>
+            <FooterDispTramite MostrarBotonCancelar=@MostrarBotonCancelar/>
+        </div>
+    </div>
+</div>
+
+@code {
+
+
+    string tratamiento { get; set; } = "";
+    private string leyendaAnio { get; set; } = "";
+    List<string> rtaAnioHomenaje;
+    private string nombreResponsable { get; set; } = "";
+    tramiteInstance _datosInstance { get; set; } = new tramiteInstance();
+    tramiteCabecera _datosCabecera { get; set; } = new tramiteCabecera();
+    negocio _datosNegocio { get; set; } = new negocioRRHH();
+    List<tramiteEvaluacion> _datosEvaluacion { get; set; } = new List<tramiteEvaluacion>();
+    private string filePath { get; set; } = "";
+    private string tempFilePath { get; set; } = "";
+    ConfigurationBuilderService cb = new ConfigurationBuilderService();
+    List<tramiteEvaluacion> Evaluaciones = new List<tramiteEvaluacion>();
+    public string _NombreFomulario { get; set; }
+    [Parameter]
+    public int Id { get; set; }
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    public string UserID { get; set; }
+    public Claim[] RolUsuario { get; set; }
+    public bool MostrarBotonCancelar { get; set; } = false;
+    public string motivoCancelacion { get; set; } = "";
+    public string canceladoPor { get; set; } = ""; // usuario logueado
+    public string mostrarMotivo { get; set; } = "none";
+    string codTramite = "";
+    public string UserName { get; set; }
+    public string LeyendaAcuerdos { get; set; }
+    List<flujoDetalle> autorizados = new List<flujoDetalle>();
+
+    public async Task TraerUID()
+    {
+        var authState = await authenticationState;
+        var user = authState?.User;
+        UserID = ClaimsPrincipalExtensions.GetDisplayNameString(user).ToLower();
+
+    }
+
+
+    private async Task mostrarBoton()
+    {
+        try
+        {
+            var authState = await authenticationState;
+            var user = authState?.User;
+
+            if (user?.Identity?.IsAuthenticated ?? false)
+            {
+                RolUsuario = ClaimsPrincipalExtensions.GetRol(user);
+
+                if (RolUsuario != null)
+                {
+                    string userName = user.Identity.Name;
+
+                    using (var dbContext = new PortalTramitesContext())
+                    {
+
+                        var flujoDetalles = await dbContext.flujoDetalle
+                            .Where(fd => fd.nombreFlujo.Contains("Licencias"))
+                            .ToListAsync();
+                        if (flujoDetalles != null && flujoDetalles.Any())
+                        {
+                            foreach (var flujoDetalle in flujoDetalles)
+                            {
+                                if (RolUsuario != null && RolUsuario.Length > 0)
+                                {
+                                    var valoresRolUsuario = RolUsuario.Select(claim => claim.Value);
+
+                                    if (flujoDetalle.grupoExcepciones != null && valoresRolUsuario.Any(valor => flujoDetalle.grupoExcepciones.Contains(valor)))
+                                    {
+                                        MostrarBotonCancelar = true;
+                                        break;
+                                    }
+                                }
+
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error en mostrarBoton: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        try
+        {
+            await mostrarBoton();
+            await TraerUID();
+      //      await InvokeAsync(() => StateHasChanged());
+
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error en disp", e);
+        }
+    }
+
+    private async void Imprimir() => await js.InvokeVoidAsync("Imprimir");
+
+    protected override async Task OnAfterRenderAsync(bool render)
+    {
+
+        try
+        {
+            if (render == true && Id != null)
+            {
+            
+                Respuesta<tramiteInstance> rta = await ITramiteInstanceRequest.GetTramiteByID($"/api/TramiteIns/GetTramiteByID/{Id}");
+                if (rta.Data != null)
+                {
+                    _datosInstance = rta.Data;
+                    _datosCabecera = rta.Data.tramiteCabecera.ElementAt(0);
+                    _NombreFomulario = rta.Data.nombreGuardado;
+                    _datosNegocio = rta.Data.negocio.ElementAt(0);
+                    foreach (var evaluacion in rta.Data.tramiteEvaluacion)
+                    {
+                        if (string.IsNullOrEmpty(nombreResponsable))
+                        {
+                            nombreResponsable = evaluacion.nombreResponsable;
+                            tratamiento = evaluacion.tratamiento;
+                        }
+
+                        _datosEvaluacion.Add(evaluacion);
+                        if (evaluacion.estado == "Cancelado" || evaluacion.estado == "Rechazado")
+                        {
+                            MostrarBotonCancelar = false;
+                        }
+                    }
+                    var anio = FuncionesGeneralesDisp.formatearAnio(_datosInstance.fechaCreacion);
+                    var rtaDatosCentrales = await requestDatosCentrales.LeyendaAnio($"/api/DatosCentrales/GetLeyendaAnio/{anio}");
+                    if (rtaDatosCentrales.Exito == 1)
+                    {
+                        leyendaAnio = rtaDatosCentrales.Data.FirstOrDefault();
+                    }
+                    await InvokeAsync(() => StateHasChanged());
+                    if (_datosNegocio.adjunto != null)
+                    {
+                        var path = Path.Combine(Path.GetTempPath(), _datosNegocio.adjuntoNombre);
+                        File.WriteAllBytes(path, _datosNegocio.adjunto);
+                        if (File.Exists(path))
+                        {
+                            tempFilePath = "api/file/GetTempImage/" + _datosNegocio.adjuntoNombre;
+                            InvokeAsync(() => StateHasChanged());
+                            if (tempFilePath == "")
+                            {
+                                toastService.ShowError("No se pudo obtener el archivo.", UserID, "Error");
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+        catch (Exception e)
+        {
+            toastService.ShowError("No se pudo obtener el trámite.", UserID, "Error");
+            Logger.LogError("Error en disp", e);
+        }
+        await js.InvokeVoidAsync("ocultarSpinner");
+
+    }
+
+    private async Task<bool> CancelarLicencia(tramiteEvaluacion evaluacion)
+    {
+        if (string.IsNullOrEmpty(motivoCancelacion))
+        {
+            mostrarMotivo = "block";
+            return false;
+        }
+        await js.InvokeVoidAsync("CerrarModal", "cargarObsCancelar");
+
+        // Aquí llama a la función correspondiente para cancelar la evaluación
+        var retorno = await FuncionesEvaluacion.CancelarEvaluacion(evaluacion, codTramite, UserName, motivoCancelacion, UserID);
+
+        if (retorno != "Cancelado")
+        {
+            toastService.ShowError(retorno, UserID, "Error");
+        }
+        else
+        {
+            toastService.ShowSuccess($"{evaluacion.estado} con éxito.", UserID, "Atención:");
+            MostrarBotonCancelar = false;
+            NavigationManager.NavigateTo("pendientesaprobacion");
+        }
+
+        return true;
+    }
+}
