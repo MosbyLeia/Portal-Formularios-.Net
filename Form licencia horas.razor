@@ -1,0 +1,170 @@
+@page "/rrhh/dpl/form"
+@attribute [Authorize]
+@using System.Collections.Generic
+@using Newtonsoft.Json
+@using System.Dynamic
+@using ProyectoPortalTramitesServer.Components.Cabeceras
+@using ProyectoPortalTramitesServer.Components.Firmas
+@using ProyectoPortalTramitesServer.Components.Negocio._01_RRHH.DPL_Lactancia
+@using ProyectoPortalTramitesServer.Services.ApiPortalTramites.IRepository
+@using ProyectoPortalTramitesServer.Entidades
+@inject IEmailSenderService emailService
+@inject IApiPortalTramitesRequest tramiteService
+@inject IJSRuntime js
+@inject IToastService toastService
+@inject NavigationManager navigationManager
+@using ProyectoPortalTramitesServer.Models
+
+<BackButton Title="SOLICITUD DE LICENCIA POR HORAS" />
+<hr class="m-y-1">
+<div class="form-group" style="margin-bottom: 0px" data-required="true">
+    <div class="panels-row-miargentina" role="tablist">
+        <div class="panel-group col-md-12 col-sm-12 accordion-flush" id="acCabecera1">
+            <div class="panel">
+                <div class="panel-heading" @onclick="@(() => ToggleSection(allowHeaderClick))">
+                    <h2 class="panel-title" style="margin:0px">
+                        <div class="accordion-button" id="btnMainData" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHeader" aria-expanded="true" aria-controls="collapseHeader">
+                            <div class="col-md-12">
+                                <h4>Complete the form to request a lactation leave </h4>
+                                <label>
+                                    @userMessage
+                                </label>
+                            </div>
+                        </div>
+                    </h2>
+                </div>
+                <div id="collapseHeader" class="panel-collapse collapse in show" role="tabpanel">
+                    <div class="accordion-body">
+                        <HeaderRRHH OnComplete="CloseHeaderSection" />
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-heading">
+                    <h2 class="panel-title" style="margin:0px">
+                        <div class="accordion-button" id="btnSpecificData" type="button" data-bs-target="#collapseBusiness" aria-expanded="true" aria-controls="collapseBusiness">
+                            <div class="col-10">
+                                Specific data
+                            </div>
+                        </div>
+                    </h2>
+                </div>
+                <div id="collapseBusiness" class="panel-collapse collapse">
+                    <div class="accordion-body">
+                        <BusinessForm OnComplete="CloseBusinessSection" Notify="@EnableButton"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    FormHeader formHeader { get; set; } = new FormHeader();
+    FormBusiness formBusiness { get; set; } = new FormBusiness();
+    private string signerName { get; set; }
+    public string userMessage { get; set; } = "Please ensure your service unit is correct.";
+    Response<Form> formResponse { get; set; } = new Response<Form>();
+
+    FormInstance formInstance;
+    Uri formUrl;
+    ServiceData serviceData { get; set; } = new ServiceData();
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    public string userId { get; set; }
+    Email userEmail { get; set; } = new Email();
+    Email managerEmail { get; set; } = new Email();
+    string formCode = "DPL";
+    public bool allowHeaderClick { get; set; } = false;
+    private bool disableButton = true;
+
+    private async Task GetUserId()
+    {
+        var authState = await authenticationState;
+        var user = authState?.User;
+        userId = user?.Identity?.Name?.ToLower();
+    }
+
+    public async Task ToggleSection(bool allowClick)
+    {
+        if (allowClick)
+        {
+            await js.InvokeVoidAsync("CloseBusinessSection", "btnSpecificData");
+            await js.InvokeVoidAsync("RemoveCollapse", "btnSpecificData");
+            allowHeaderClick = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool render)
+    {
+        await js.InvokeVoidAsync("hideSpinner");
+    }
+
+    public async Task CloseHeaderSection(FormHeader header)
+    {
+        if (header != null)
+        {
+            formHeader = header;           
+            await js.InvokeVoidAsync("CloseHeaderSection", "btnMainData");
+            await js.InvokeVoidAsync("AddCollapse", "btnSpecificData");
+            await js.InvokeVoidAsync("OpenBusinessSection", "btnSpecificData");
+            userMessage = $"{formHeader.Name} - {formHeader.CUIL}";
+            allowHeaderClick = true;
+            await InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+    public async Task CloseBusinessSection(FormBusiness business)
+    {
+        if (business != null)
+        {
+            formBusiness = business;
+            await SubmitForm();
+        }
+    }
+
+    private async Task<bool> SubmitForm()
+    {
+        try
+        {
+            await GetUserId();
+            string updateType = "49";
+            string formName = $"{formHeader.CUIL}_{formCode}";
+            serviceData.Record = formHeader.Record.ToString();
+            serviceData.StartDate = formBusiness.StartDate;
+            serviceData.UpdateType = updateType;
+            serviceData.FormName = formName;
+
+            formInstance = await FormHelper.CreateFormInstance(formHeader, formCode, formBusiness, userId);
+            formInstance.BusinessForms.First().Details = FormHelper.GetBusinessDetails(formBusiness);
+            formResponse = await tramiteService.InsertFormInstance("/api/FormInstance/InsertFormInstanceRRHH", formInstance);
+
+            if (formResponse.Success)
+            {
+                formInstance.Id = formResponse.Data.InstanceId;
+                if (await emailService.SendManagerEmails(formCode, formInstance, userId, toastService) && await emailService.SendUserEmails(formCode, formInstance, userId, toastService, formInstance.Evaluation.First().Status))
+                {
+                    toastService.ShowSuccess("Form successfully created", userId, "Success");
+                    navigationManager.NavigateTo("myforms");
+                }
+            }
+            else
+            {
+                toastService.ShowError("Failed to create form.", userId, "Error");
+                EnableButton(false);
+            }
+        }
+        catch (Exception e)
+        {
+            toastService.ShowError(e.Message, userId, "Error");
+            EnableButton(false);
+        }
+        return true;
+    }
+
+    private async Task EnableButton(bool enable)
+    {
+        disableButton = enable;
+    }
+}
