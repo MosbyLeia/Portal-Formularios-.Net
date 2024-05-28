@@ -80,3 +80,36 @@
             return respuesta;
         }
 
+
+
+                            if (tramiteInstance.negocioSDR_SR_Aplicacion != null)
+                            {
+                                if (tramiteInstance.negocioSDR_SR_Aplicacion.Count > 0)
+                                {
+                                    foreach (var item in tramiteInstance.negocioSDR_SR_Aplicacion)
+                                    {
+                                        if (item != null)
+                                        {
+                                            var entitynegocioSDRSRAplicacion = await ConstructoresNegocios.CrearNegocioSDRSRAplicacionParaPost(entity.id, item);
+                                            _portalTramitesContext.negocioSDR_SR_Aplicacion.Add(entitynegocioSDRSRAplicacion);
+                                            int FInstanciaSDRSRAplicacion = await _portalTramitesContext.SaveChangesAsync();
+                                        }
+                                    }
+                                }
+                            }
+                            if (tramiteInstance.negocioSDR_SR_CuentaGenerica != null)
+                            {
+                                if (tramiteInstance.negocioSDR_SR_CuentaGenerica.Count > 0)
+                                {
+                                    foreach (var item in tramiteInstance.negocioSDR_SR_CuentaGenerica)
+                                    {
+                                        if (item != null)
+                                        {
+                                            var entitynegocioSDRSRCuentaGenerica = await ConstructoresNegocios.CrearNegocioSDRSRCuentaGenericaParaPost(entity.id, item);
+                                            _portalTramitesContext.negocioSDR_SR_CuentaGenerica.Add(entitynegocioSDRSRCuentaGenerica);
+                                            int FInstanciaSDRSRCuentaGenerica = await _portalTramitesContext.SaveChangesAsync();
+                                        }
+                                    }
+                                }
+                            }
+
