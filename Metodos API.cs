@@ -152,3 +152,121 @@
             }
             return oRespuesta;
         }
+
+
+
+   List<negocio _CC_Umbral> xxh = new List< negocio_Umbral>();
+
+            try
+            {
+                var rta = _portalTramitesContext. negocio_Umbral
+                       .Where(t => t.id == Id).ToListAsync();
+
+                if (rta.Result.Count > 0)
+                {
+                    foreach ( negocio_Umbral xx in rta.Result)
+                    {
+                        xxh.Add(xx);
+                    }
+                    respuesta.Data = xxh;
+
+                    respuesta.Exito = 1;
+                    respuesta.Mensaje = "Devolución lista de xx exitosa.";
+                }
+                else
+                {
+                    respuesta.Exito = 1;
+                    respuesta.Mensaje = $"No se encontró un xx con el Id: {Id}";
+                }
+
+            }
+            catch (Exception ex)
+            {
+                respuesta.Exito = 0;
+                logger.LogError(ex.Message);
+                respuesta.Mensaje = ex.Message;
+            }
+            return respuesta;
+        }
+
+
+        [HttpPost("Historico")]
+        public async Task<Respuesta< negocio_Umbral_Historico>> AddHistorico( negocio_Umbral_Historico model)
+        {
+            Respuesta< negocio_Umbral_Historico> oRespuesta = new Respuesta< negocio_Umbral_Historico>();
+            LoggerManager logger = new LoggerManager();
+
+            try
+            {
+                using (var context = _portalTramitesContext)
+                {
+                     negocio_Umbral_Historico oUmbral = new  negocio_Umbral_Historico();
+                    oUmbral.xx = model.xx;
+                    oUmbral.creado = model.creado;
+                    oUmbral.creadoPor = model.creadoPor;
+                    oUmbral.modificado = model.modificado;
+                    oUmbral.modificadoPor = model.modificadoPor;
+                    oUmbral.activo = model.activo;
+                    oUmbral.fechaDesde = model.fechaDesde;
+                    oUmbral.fechaHasta = model.fechaHasta;
+                    oUmbral.modificadoPor_Historico = model.modificadoPor_Historico;
+                   // oUmbral.camposModificados = model.camposModificados;
+
+
+                    context. negocio_Umbral_Historico.Add(oUmbral);
+                    context.SaveChanges();
+                    oRespuesta.Data = oUmbral;
+                    oRespuesta.Exito = 1;
+                    oRespuesta.Mensaje = "El registro se ha agregado exitosamente";
+                }
+            }
+            catch (Exception ex)
+            {
+                oRespuesta.Exito = 0;
+                logger.LogError("Error al insertar xx", ex);
+                oRespuesta.Mensaje = ex.Message;
+            }
+            return oRespuesta;
+        }
+
+        
+        [HttpGet("GetUmbralHistoricoById/{Id}")]
+        public async Task<Respuesta<List< negocio_Umbral_Historico>>> GetUmbralHistoricoById(int Id)
+        {
+            Respuesta<List< negocio_Umbral_Historico>> respuesta = new Respuesta<List< negocio_Umbral_Historico>>();
+            LoggerManager logger = new LoggerManager();
+
+            try
+            {
+                var xxHistorico = await _portalTramitesContext. negocio_Umbral_Historico
+                    .Where(t => t.id == Id)
+                    .OrderByDescending(x => x.id)
+                    .ToListAsync();
+
+                if (xxHistorico.Count > 0)
+                {
+                    respuesta.Exito = 1;
+                    respuesta.Data = xxHistorico; 
+                    respuesta.Mensaje = "Devolución lista de xx exitosa.";
+                }
+                else
+                {
+                    respuesta.Exito = 0;
+                    respuesta.Mensaje = $"No se encontró un xx con el Id: {Id}";
+                }
+            }
+            catch (Exception ex)
+            {
+                respuesta.Exito = 0;
+                logger.LogError(ex.Message);
+                respuesta.Mensaje = ex.Message;
+            }
+
+            return respuesta;
+        }
+
+
+
+    }
+    }
+
