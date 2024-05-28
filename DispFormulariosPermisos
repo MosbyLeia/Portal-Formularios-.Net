@@ -1,0 +1,217 @@
+@attribute [Authorize]
+@page "/app/disp/{Id:int}"
+@using Proyecto.Services.ApiPortalTramites.IRepository;
+@using Proyecto.Components.Firmas;
+@using Newtonsoft.Json;
+@inject IloggerManager Logger
+@inject IJSRuntime js
+@inject ITramiteInstanceRequest ITramiteInstanceRequest
+@inject ITramiteRequest iTramiteRequest
+@*<main>*@
+<Volver NombreFormulario=@NombreTramite />
+    @*<div class="container-md" id="container">*@
+
+<div class="container-md impresion" id="container">
+    @if (_FechaCreacion != null && _NumeroFormulario != null && _NombreFomulario != null)
+    {
+        <HeaderDispTramite FechaCreacion="_FechaCreacion" NumeroTramite="_NumeroFormulario" NombreTramite="@_NombreFomulario" />
+    }
+    @*<div class="row">*@
+    @*<div class="col-sm-12 col-lg-12 col-sm-offset-0 col-md-10 col-md-offset-1">*@
+    @*<fieldset>*@
+    @* <section class="bg-white p-t-1 p-x-3">*@
+
+    <div class="datosTramitePersona m-b-3">
+        <h3>Información del Usuario:</h3>
+        <div class="col-12 col-sm-12 col-md-12">
+            <p><strong>Apellido y nombre:</strong> @_datosCabecera.apellido, @_datosCabecera.nombres</p>
+        </div>
+        <div class="col-12 col-sm-12 col-md-12">
+            <p><strong>Documento:</strong> @_datosCabecera.tipoDocumento @_datosCabecera.numeroDocumento</p>
+        </div>
+        <div class="col-12 col-sm-12 col-md-12">
+            <p><strong>Dependencia:</strong> @_datosCabecera.dependencia</p>
+        </div>
+        <div class="col-12 col-sm-12 col-md-12">
+            <p><strong>Area / Sector:</strong> @_datosCabecera.sector</p>
+        </div>
+        <div class="col-12 col-sm-12 col-md-12">
+            <p><strong>Cargo:</strong> @_datosCabecera.cargo</p>
+        </div>
+        <div class="col-12 col-sm-12 col-md-12">
+            <p><strong>Domicilio:</strong> @_datosCabecera.domicilioLaboral </p>
+        </div>
+        <div class="col-12 col-sm-12 col-md-12">
+            <p><strong>Teléfono:</strong> @_datosCabecera.telefono @_datosCabecera.telefonoCelular</p>
+        </div>
+    </div>
+
+ 
+    <div class="row">
+        <div class="row m-y-1">
+            <div class="col-md-12 alert alert-secondary" role="alert">
+                <h6>
+                    Opción deseada: @_datosNegocio.opcionDeseada
+                    @if (!string.IsNullOrEmpty(_datosNegocio.usuario))
+                    {
+                        <span> para el usuario <strong>"@_datosNegocio.usuario"</strong></span>
+                    }
+                </h6>
+            </div>
+            <div class="col-md-12 col-lg-12">
+                <table class="table mt-1">
+                    <thead>
+                    <th></th>
+                    <th>Perfil</th>
+                    <th>Detalle</th>
+                    </thead>
+                    <tbody>
+                        @foreach (negocioAplicaciones_Roles_Seleccionado itemRol in _datosNegocioRoles)
+                        {
+                            <tr>
+                                <td class="align-top">
+                                    @if (itemRol.seleccionado)
+                                    {
+                                        <i class="fa fa-check"></i>
+
+                                    }
+
+                                </td>
+                                <td class="align-top">@itemRol.perfil</td>
+                                <td class="align-top"><span class="blockquote-footer lh-1">@itemRol.detalle</span></td>
+                            </tr>
+                                                    }
+
+
+                                            </tbody>
+                </table>
+
+                @if (oXX.Count > 0)
+                {
+                    @foreach (negocioAplicaciones_XX item in oXX)
+                    {
+                        <p> <strong>Equipo: </strong>@item.equipo</p>
+                        <p> <strong>Tomo: </strong>@item.tomo</p>
+                        <p> <strong>Folio: </strong>@item.folio</p>
+
+                    }
+                 
+                            }
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12">
+        @if (!string.IsNullOrEmpty(LeyendaAcuerdos))
+        {
+            <div class="row alert alert alert-light text-justify">
+                @LeyendaAcuerdos
+            </div>
+        }
+    </div>
+    <div class="row">
+        <hr style="border:1.5px" />
+        <div class="footerPDF">
+            <div class="col-12 mt-3 row">
+                @foreach (var itemEvaluacion in _datosEvaluacion)
+                {
+                    @if (itemEvaluacion.estado != "Pendiente")
+                    {
+                        <div class="col-4 mt-4 mx-auto text-center">
+                            <strong>@itemEvaluacion.estado </strong>
+                            <br />
+                            @itemEvaluacion.nombreResponsable <br />
+                            @if (itemEvaluacion.idMeta4 == itemEvaluacion.userResponsable)
+                            {
+                                <i>En representación de @itemEvaluacion.userResponsable</i>
+                                <br />
+                            }
+                            @itemEvaluacion.fechaAprobacion
+                        </div>
+                    }
+                    @if (itemEvaluacion.estado == "Rechazado" && !string.IsNullOrEmpty(@itemEvaluacion.observacion))
+                    {
+                        <div class="col-12 alert alert-danger mt-3" role="alert">
+                            @itemEvaluacion.observacion
+                        </div>
+                    }
+                }
+            </div>
+
+        </div>
+    <div class="col-md-12 col-lg-12">
+        <SeccionFirmas idTramite="Id"></SeccionFirmas>
+    </div>
+    <div class="cFooter">
+        <div class="col offset-md-10 mt-5">
+            <button type="button" class="btn" style="color: #2e7d33; border: 0.1rem solid #2e7d33; padding: 0.375rem 0.75rem; font-size: 0.875rem;" target="_blank" @onclick="Imprimir" id="botonImprimir">
+                IMPRIMIR
+            </button>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    [Parameter]
+    public int Id { get; set; }
+    public string NombreTramite { get; set; }
+    public string LeyendaAcuerdos { get; set; }
+    private string legajo { get; set; } = "";
+    private async void Imprimir() => await js.InvokeVoidAsync("Imprimir");
+    tramiteInstance _datosInstance { get; set; } = new tramiteInstance();
+    tramiteCabecera _datosCabecera { get; set; } = new tramiteCabecera();
+    negocioAplicaciones _datosNegocio { get; set; } = new negocioAplicaciones();
+    List<negocioAplicaciones_Roles_Seleccionado> _datosNegocioRoles { get; set; } = new List<negocioAplicaciones_Roles_Seleccionado>();
+    negocioAplicaciones_XX _Tablaxx { get; set; } = new negocioAplicaciones_XX _Tablaxx ();
+    List<tramiteEvaluacion> _datosEvaluacion { get; set; } = new List<tramiteEvaluacion>();
+    ConfigurationBuilderService cb = new ConfigurationBuilderService();
+    negocioAplicaciones _NegocioXX { get; set; } = new negocioAplicaciones();
+    List<negocioAplicaciones_XX> oTabla { get; set; } = new List<negocioAplicaciones_XX>();
+
+    public DateTime? _FechaCreacion { get; set; }
+    public string _NombreFomulario { get; set; }
+    public int? _NumeroFormulario { get; set; }
+
+    private async Task TraerUID()
+    {
+        var authState = await authenticationState;
+        var user = authState?.User;
+        legajo = ClaimsPrincipalExtensions.GetLegajo(user).ToLower();
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Respuesta<tramiteInstance> rta = await ITramiteInstanceRequest.GetTramiteByID($"/api/TramiteInstance/GetTramiteByID/{Id}");
+            Respuesta<tramiteInstance> rtaXX = await ITramiteInstanceRequest.GetTramiteByID($"/api/NegocioSDR_xx/GetTramiteByID/{Id}");
+            if (Convert.ToBoolean(rta.Exito))
+            {
+                _datosInstance = rta.Data;
+                var rtaTramite = await iTramiteRequest.Get($"/api/Tramite/GetTramitesById/{_datosInstance.idTramite}");
+                NombreTramite = rtaTramite.Data.nombreTramite;
+                _datosCabecera = rta.Data.tramiteCabecera.FirstOrDefault();
+                _datosNegocio = rta.Data.negocioAplicaciones.FirstOrDefault();
+                LeyendaAcuerdos = rta.Data.acuerdoDeUso;
+                _NombreFomulario = _datosInstance.nombreGuardado;
+                _NumeroFormulario = _datosInstance.nroFormulario;
+                _FechaCreacion = _datosInstance.fechaCreacion;
+                _datosNegocioRoles = rta.Data.negocioAplicaciones_Roles_Seleccionado.ToList();
+                _datosEvaluacion = rta.Data.tramiteEvaluacion.ToList();
+                oXX = rta.Data.negocioAplicaciones_XX.ToList();
+                             
+                await InvokeAsync(() => StateHasChanged());
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"Error en disp {NombreTramite}", e);
+        }
+        await js.InvokeVoidAsync("ocultarSpinner");
+    }
+
+   
+}
